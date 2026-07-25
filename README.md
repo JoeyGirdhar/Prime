@@ -1,4 +1,4 @@
-# Tiny Transformer From Scratch
+# Tiny Transformer From Scratch (Optimus Prime)
 
 A small **GPT built from scratch in PyTorch** - hand-written multi-head causal
 self-attention, no `nn.Transformer` - trained to generate **molecules** written as
