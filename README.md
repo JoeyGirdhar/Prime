@@ -1,7 +1,7 @@
 # Tiny Transformer From Scratch
 
-A small **GPT built from scratch in PyTorch** — hand-written multi-head causal
-self-attention, no `nn.Transformer` — trained to generate **molecules** written as
+A small **GPT built from scratch in PyTorch** - hand-written multi-head causal
+self-attention, no `nn.Transformer` - trained to generate **molecules** written as
 SMILES-style strings. It learns the language's *structure* well enough to invent
 new, structurally-valid molecules it never saw in training.
 
@@ -22,7 +22,7 @@ to generate 300 molecules:
 | **Novel** (not in the training set) | **198/199** |
 | Unique among valid | 100% |
 
-The model is **~73× better than chance** at producing valid molecules — and nearly
+The model is **~73× better than chance** at producing valid molecules - and nearly
 everything it generates is new. It isn't memorizing; it learned the rules.
 
 Molecules it invented (valid, novel):
@@ -35,8 +35,8 @@ CFN=CCS(C)#NCCC  NCC5C=N#S(O)N#C5  C#CFNCC#C=CN2S2
 ## The part that shows off attention
 
 A molecule can open a **ring bond** with a digit and must **close it with the same
-digit** later — e.g. `C2...C2`, `N4...N4`. Those two digits can be many characters
-apart, so getting it right is a genuine **long-range dependency** — exactly what
+digit** later - e.g. `C2...C2`, `N4...N4`. Those two digits can be many characters
+apart, so getting it right is a genuine **long-range dependency** - exactly what
 self-attention is for. A model without attention (an n-gram, say) can't reliably
 pair them; this one does, which is a big part of why 66% of its output is valid.
 Balanced branch parentheses `( )` are a second structural rule it picks up.
@@ -65,14 +65,14 @@ numbers above are CPU-only.
 A GPT is a stack of identical blocks. Each block does two things, each wrapped in a
 residual connection:
 
-1. **Causal self-attention** — every token computes a query, looks at the keys of
+1. **Causal self-attention** - every token computes a query, looks at the keys of
    all *earlier* tokens, and pulls in a weighted mix of their values. The causal
    mask forbids looking ahead. This is where long-range structure is captured.
-2. **MLP** — a small position-wise feed-forward network that transforms each token.
+2. **MLP** - a small position-wise feed-forward network that transforms each token.
 
 Add token embeddings (what a symbol means) + positional embeddings (where it sits),
 run the blocks, and a final linear layer predicts the next character. Training is
-plain next-token prediction with cross-entropy — the same objective as a full-size
+plain next-token prediction with cross-entropy - the same objective as a full-size
 LLM, just tiny. It's all in [`tinygpt/model.py`](tinygpt/model.py), commented.
 
 ## Project structure
@@ -94,15 +94,15 @@ main.py          train then sample
   validity rate climb.
 - **Sweep temperature** in `sample.py` (0.5 = safer/more valid, 1.0 = more diverse).
 - **Swap the language:** point the tokenizer at chess PGN moves or MIDI note events
-  — the model doesn't change, only the data and the validity check.
+  - the model doesn't change, only the data and the validity check.
 - **Real chemistry:** replace the structural checker with **RDKit** to measure true
   chemical validity, not just balanced brackets.
 - **Add a metric:** track validity rate *during* training to see when structure emerges.
 
-## What this is — and isn't
+## What this is - and isn't
 
-- **Is:** a correct, readable transformer you can actually follow end to end —
-  attention, training loop, sampling — with a measurable notion of "did it learn."
+- **Is:** a correct, readable transformer you can actually follow end to end -
+  attention, training loop, sampling - with a measurable notion of "did it learn."
 - **Isn't:** a real molecular generator. "Validity" is structural (brackets and ring
   digits), not chemical; the corpus is synthetic; the model is deliberately tiny.
 
