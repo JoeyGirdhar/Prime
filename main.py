@@ -1,13 +1,4 @@
-"""
-Entry point. Trains the tiny GPT, then samples molecules and scores them.
-
-    python main.py
-
-Or run the steps separately:
-    python train.py --iters 3000     # train (saves checkpoints/model.pt)
-    python sample.py                 # generate + measure validity
-    python tests/test_tinygpt.py     # fast tests, no training needed
-"""
+"""Train, then sample."""
 
 import subprocess
 import sys

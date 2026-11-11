@@ -1,14 +1,6 @@
-"""
-Train the tiny GPT on procedurally-generated molecule strings.
+"""Train the model on generated molecule strings.
 
-Runs on a laptop CPU in a few minutes with the default (small) config. No
-downloads: the corpus is generated in-process and is valid by construction.
-
-    python train.py                 # default: ~1500 iters
-    python train.py --iters 3000    # train longer for a higher validity rate
-
-Saves the trained model to checkpoints/model.pt and a loss curve to assets/.
-"""
+Usage: python train.py [--iters N]"""
 
 import argparse
 import os
@@ -24,7 +16,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 def get_batch(data, block_size, batch_size, device):
     ix = torch.randint(len(data) - block_size, (batch_size,))
     x = torch.stack([data[i:i + block_size] for i in ix])
-    y = torch.stack([data[i + 1:i + 1 + block_size] for i in ix])   # targets = inputs shifted by 1
+    y = torch.stack([data[i + 1:i + 1 + block_size] for i in ix])
     return x.to(device), y.to(device)
 
 
@@ -59,7 +51,6 @@ def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"device: {device}")
 
-    # --- Data ---
     molecules = generate_corpus(n=args.corpus, seed=0)
     tokenizer, text = CharTokenizer.from_corpus(molecules)
     print(f"corpus: {len(molecules)} molecules, {len(text)} chars, vocab={tokenizer.vocab_size}")
@@ -67,14 +58,12 @@ def main():
     n = int(0.9 * len(data))
     splits = {"train": data[:n], "val": data[n:]}
 
-    # --- Model ---
     cfg = GPTConfig(vocab_size=tokenizer.vocab_size, block_size=args.block,
                     n_layer=args.n_layer, n_head=args.n_head, n_embd=args.n_embd)
     model = GPT(cfg).to(device)
     print(f"model parameters: {model.num_params():,}")
     opt = torch.optim.AdamW(model.parameters(), lr=args.lr)
 
-    # --- Training loop ---
     history = []
     start = time.time()
     for it in range(1, args.iters + 1):
@@ -91,13 +80,11 @@ def main():
             print(f"  iter {it:5d}  train {ev['train']:.3f}  val {ev['val']:.3f}  "
                   f"({time.time() - start:.0f}s)")
 
-    # --- Save checkpoint ---
     os.makedirs(os.path.join(HERE, "checkpoints"), exist_ok=True)
     ckpt_path = os.path.join(HERE, "checkpoints", "model.pt")
     torch.save({"model": model.state_dict(), "config": vars(cfg), "chars": tokenizer.chars}, ckpt_path)
     print(f"\nsaved checkpoint -> {ckpt_path}")
 
-    # --- Loss curve ---
     try:
         import matplotlib
         matplotlib.use("Agg")

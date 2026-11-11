@@ -1,4 +1,4 @@
-"""A tiny from-scratch GPT that learns to generate molecule (SMILES-style) strings."""
+"""Small GPT that generates SMILES-style molecule strings."""
 
 from .model import GPT, GPTConfig
 from .tokenizer import CharTokenizer

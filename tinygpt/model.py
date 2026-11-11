@@ -1,15 +1,4 @@
-"""
-A tiny GPT, built from scratch in PyTorch.
-
-Everything that makes a transformer a transformer is here and commented:
-token + positional embeddings, multi-head *causal* self-attention (implemented by
-hand, not via nn.MultiheadAttention), a LayerNorm + MLP block, and a language-model
-head. It's a stripped-down, readable cousin of Karpathy's nanoGPT.
-
-The one idea to take away: self-attention lets every position look back at every
-earlier position and decide what to pull in. That's what lets the model learn
-long-range structure -- like closing a ring bond it opened 20 characters ago.
-"""
+"""Small GPT (causal self-attention transformer) in PyTorch."""
 
 from dataclasses import dataclass
 
@@ -21,7 +10,7 @@ from torch.nn import functional as F
 @dataclass
 class GPTConfig:
     vocab_size: int
-    block_size: int = 64      # max context length (how far back attention can see)
+    block_size: int = 64
     n_layer: int = 3
     n_head: int = 4
     n_embd: int = 128
@@ -36,33 +25,31 @@ class CausalSelfAttention(nn.Module):
         assert cfg.n_embd % cfg.n_head == 0
         self.n_head = cfg.n_head
         self.n_embd = cfg.n_embd
-        # One linear projects the input into query, key, and value at once.
         self.qkv = nn.Linear(cfg.n_embd, 3 * cfg.n_embd)
         self.proj = nn.Linear(cfg.n_embd, cfg.n_embd)
         self.attn_drop = nn.Dropout(cfg.dropout)
         self.resid_drop = nn.Dropout(cfg.dropout)
-        # Lower-triangular mask: position t may attend to positions <= t only.
+        # causal mask
         self.register_buffer(
             "mask", torch.tril(torch.ones(cfg.block_size, cfg.block_size))
                         .view(1, 1, cfg.block_size, cfg.block_size))
 
     def forward(self, x):
-        B, T, C = x.shape                       # batch, time (tokens), channels (embd)
+        B, T, C = x.shape
         q, k, v = self.qkv(x).split(self.n_embd, dim=2)
-        # Reshape into heads: (B, n_head, T, head_dim)
+        # (B, n_head, T, head_dim)
         head_dim = C // self.n_head
         q = q.view(B, T, self.n_head, head_dim).transpose(1, 2)
         k = k.view(B, T, self.n_head, head_dim).transpose(1, 2)
         v = v.view(B, T, self.n_head, head_dim).transpose(1, 2)
 
-        # Attention scores: how much each token attends to each earlier token.
         att = (q @ k.transpose(-2, -1)) / (head_dim ** 0.5)
         att = att.masked_fill(self.mask[:, :, :T, :T] == 0, float("-inf"))
-        att = F.softmax(att, dim=-1)            # weights sum to 1 over the past
+        att = F.softmax(att, dim=-1)
         att = self.attn_drop(att)
 
-        y = att @ v                             # weighted sum of value vectors
-        y = y.transpose(1, 2).contiguous().view(B, T, C)   # recombine heads
+        y = att @ v
+        y = y.transpose(1, 2).contiguous().view(B, T, C)
         return self.resid_drop(self.proj(y))
 
 
@@ -90,7 +77,7 @@ class Block(nn.Module):
         self.mlp = MLP(cfg)
 
     def forward(self, x):
-        x = x + self.attn(self.ln1(x))   # residual: add the layer's output back on
+        x = x + self.attn(self.ln1(x))
         x = x + self.mlp(self.ln2(x))
         return x
 
@@ -99,8 +86,8 @@ class GPT(nn.Module):
     def __init__(self, cfg: GPTConfig):
         super().__init__()
         self.cfg = cfg
-        self.tok_emb = nn.Embedding(cfg.vocab_size, cfg.n_embd)   # what each token means
-        self.pos_emb = nn.Embedding(cfg.block_size, cfg.n_embd)   # where it sits in the sequence
+        self.tok_emb = nn.Embedding(cfg.vocab_size, cfg.n_embd)
+        self.pos_emb = nn.Embedding(cfg.block_size, cfg.n_embd)
         self.drop = nn.Dropout(cfg.dropout)
         self.blocks = nn.ModuleList([Block(cfg) for _ in range(cfg.n_layer)])
         self.ln_f = nn.LayerNorm(cfg.n_embd)
@@ -120,10 +107,10 @@ class GPT(nn.Module):
         B, T = idx.shape
         assert T <= self.cfg.block_size, "sequence longer than block_size"
         pos = torch.arange(T, device=idx.device)
-        x = self.drop(self.tok_emb(idx) + self.pos_emb(pos))   # combine meaning + position
+        x = self.drop(self.tok_emb(idx) + self.pos_emb(pos))
         for block in self.blocks:
             x = block(x)
-        logits = self.head(self.ln_f(x))                       # next-token scores
+        logits = self.head(self.ln_f(x))
 
         loss = None
         if targets is not None:
@@ -134,9 +121,9 @@ class GPT(nn.Module):
     def generate(self, idx, max_new_tokens, temperature=1.0, top_k=None, stop_token=None):
         """Autoregressively sample tokens one at a time."""
         for _ in range(max_new_tokens):
-            idx_cond = idx[:, -self.cfg.block_size:]           # crop to context window
+            idx_cond = idx[:, -self.cfg.block_size:]
             logits, _ = self(idx_cond)
-            logits = logits[:, -1, :] / temperature            # last position's scores
+            logits = logits[:, -1, :] / temperature
             if top_k is not None:
                 v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
                 logits[logits < v[:, [-1]]] = float("-inf")

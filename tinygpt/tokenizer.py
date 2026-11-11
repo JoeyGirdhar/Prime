@@ -1,11 +1,4 @@
-"""
-Character-level tokenizer.
-
-The "vocabulary" is just the set of characters that appear in the corpus plus a
-newline that separates molecules (and doubles as the start/stop token). Tiny
-vocab (~15 symbols) is part of why this trains fast on a CPU.
-"""
-
+"""Character-level tokenizer."""
 
 class CharTokenizer:
     def __init__(self, chars):

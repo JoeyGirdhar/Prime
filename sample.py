@@ -1,16 +1,6 @@
-"""
-Generate molecules from the trained model and measure what it learned.
+"""Sample molecules from a checkpoint and report validity and novelty.
 
-Reports three numbers:
-  Validity  -- % of generated strings that are structurally valid (balanced
-               parens, paired ring digits). This is the emergent-structure metric.
-  Novelty   -- % of valid generations NOT present in the training corpus
-               (proof it's generalizing, not memorizing).
-  Unique    -- % distinct among valid generations.
-
-    python sample.py            # generate 200 molecules and score them
-    python sample.py -n 50      # generate fewer, print them all
-"""
+Usage: python sample.py [-n 200] [--temperature 0.7]"""
 
 import argparse
 import os
@@ -36,7 +26,7 @@ def sample_molecules(model, tokenizer, n, device, temperature=0.9):
     nl = tokenizer.stoi["\n"]
     mols = []
     for _ in range(n):
-        start = torch.tensor([[nl]], dtype=torch.long, device=device)   # begin at newline
+        start = torch.tensor([[nl]], dtype=torch.long, device=device)
         out = model.generate(start, max_new_tokens=48, temperature=temperature,
                              top_k=len(tokenizer.chars), stop_token=nl)
         s = tokenizer.decode(out[0].tolist()).strip("\n")
@@ -54,7 +44,7 @@ def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model, tokenizer = load_model(device)
 
-    training_set = set(generate_corpus(n=4000, seed=0))   # same corpus the model trained on
+    training_set = set(generate_corpus(n=4000, seed=0))
     mols = sample_molecules(model, tokenizer, args.n, device, args.temperature)
 
     valid = [m for m in mols if is_valid(m)]

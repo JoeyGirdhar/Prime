@@ -1,14 +1,4 @@
-"""
-Fast tests -- no training required, no GPU.
-
-  1. The model's forward pass produces correctly-shaped logits and a scalar loss.
-  2. The validator accepts valid strings and rejects the specific ways a molecule
-     string can be malformed.
-  3. The model can OVERFIT a tiny batch (loss drops toward zero) -- proof that the
-     attention + backprop wiring actually learns.
-
-Run:  python tests/test_tinygpt.py   (or: pytest -q)
-"""
+"""Shape, validator and overfit tests."""
 
 import os
 import sys
@@ -31,14 +21,14 @@ def test_forward_shapes():
 
 
 def test_validator():
-    assert is_valid("CCO")                 # ethanol-like
-    assert is_valid("C1CCCCC1")            # a ring: digit 1 opened and closed
-    assert is_valid("CC(C)CO")            # a branch
-    assert not is_valid("CC(C")           # unbalanced parenthesis
-    assert not is_valid("C1CC")           # ring opened but never closed
-    assert not is_valid("C==C")           # two bonds in a row
-    assert not is_valid("=CO")            # starts with a bond
-    assert not is_valid("CCX")            # disallowed character
+    assert is_valid("CCO")
+    assert is_valid("C1CCCCC1")
+    assert is_valid("CC(C)CO")
+    assert not is_valid("CC(C")
+    assert not is_valid("C1CC")
+    assert not is_valid("C==C")
+    assert not is_valid("=CO")
+    assert not is_valid("CCX")
     print("[validator] OK")
 
 
